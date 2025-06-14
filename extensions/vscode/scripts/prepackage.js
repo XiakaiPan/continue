@@ -105,32 +105,51 @@ void (async () => {
     "webview",
   );
 
-  const indexHtmlPath = path.join(intellijExtensionWebviewPath, "index.html");
-  fs.copyFileSync(indexHtmlPath, "tmp_index.html");
-  rimrafSync(intellijExtensionWebviewPath);
-  fs.mkdirSync(intellijExtensionWebviewPath, { recursive: true });
-
-  await new Promise((resolve, reject) => {
-    ncp("dist", intellijExtensionWebviewPath, (error) => {
-      if (error) {
-        console.warn(
-          "[error] Error copying React app build to JetBrains extension: ",
-          error,
-        );
-        reject(error);
+  try {
+    const indexHtmlPath = path.join(intellijExtensionWebviewPath, "index.html");
+    
+    // Check if JetBrains extension directory exists
+    if (fs.existsSync(path.join("..", "extensions", "intellij"))) {
+      if (fs.existsSync(indexHtmlPath)) {
+        fs.copyFileSync(indexHtmlPath, "tmp_index.html");
       }
-      resolve();
-    });
-  });
+      
+      rimrafSync(intellijExtensionWebviewPath);
+      fs.mkdirSync(intellijExtensionWebviewPath, { recursive: true });
 
-  // Put back index.html
-  if (fs.existsSync(indexHtmlPath)) {
-    rimrafSync(indexHtmlPath);
+      await new Promise((resolve, reject) => {
+        ncp("dist", intellijExtensionWebviewPath, (error) => {
+          if (error) {
+            console.warn(
+              "[warn] Error copying React app build to JetBrains extension: ",
+              error,
+            );
+            // Don't reject in Docker environments - this is non-critical for VS Code development
+            console.warn("[warn] Continuing without JetBrains extension copy (non-critical for VS Code development)");
+            resolve();
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      // Put back index.html
+      if (fs.existsSync("tmp_index.html")) {
+        if (fs.existsSync(indexHtmlPath)) {
+          rimrafSync(indexHtmlPath);
+        }
+        fs.copyFileSync("tmp_index.html", indexHtmlPath);
+        fs.unlinkSync("tmp_index.html");
+      }
+
+      console.log("[info] Copied gui build to JetBrains extension");
+    } else {
+      console.log("[info] JetBrains extension directory not found, skipping copy (non-critical for VS Code development)");
+    }
+  } catch (error) {
+    console.warn("[warn] Failed to copy React app build to JetBrains extension:", error.message);
+    console.warn("[warn] Continuing without JetBrains extension copy (non-critical for VS Code development)");
   }
-  fs.copyFileSync("tmp_index.html", indexHtmlPath);
-  fs.unlinkSync("tmp_index.html");
-
-  console.log("[info] Copied gui build to JetBrains extension");
 
   // Then copy over the dist folder to the VSCode extension //
   const vscodeGuiPath = path.join("../extensions/vscode/gui");
@@ -344,7 +363,12 @@ void (async () => {
 
   // GitHub Actions doesn't support ARM, so we need to download pre-saved binaries
   // 02/07/25 - the above comment is out of date, there is now support for ARM runners on GitHub Actions
-  if (isArmTarget) {
+  // Skip custom ARM binary downloads in Docker environments to avoid compatibility issues
+  const isDockerEnvironment = process.env.CONTINUE_DEVELOPMENT === "true" || fs.existsSync("/.dockerenv");
+  
+  console.log(`[info] Target: ${target}, ARM: ${isArmTarget}, Docker: ${isDockerEnvironment}`);
+  
+  if (isArmTarget && !isDockerEnvironment) {
     // lancedb binary
     const packageToInstall = {
       "darwin-arm64": "@lancedb/vectordb-darwin-arm64",
@@ -389,7 +413,7 @@ void (async () => {
     fs.unlinkSync("node_modules/@esbuild/esbuild.zip");
   } else {
     // Download esbuild from npm in tmp and copy over
-    console.log("npm installing esbuild binary");
+    console.log("[info] Using npm install approach for esbuild (Docker environment or non-ARM target)");
     await installNodeModuleInTempDirAndCopyToCurrent(
       "esbuild@0.17.19",
       "@esbuild",

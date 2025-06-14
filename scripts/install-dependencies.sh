@@ -58,7 +58,15 @@ pushd extensions/vscode
 npm install
 npm link @continuedev/core
 npm run prepackage
-npm run package
+
+# Skip packaging in Docker environments to avoid file system issues
+# The extension can still be debugged with F5 without creating a VSIX package
+if [ -f "/.dockerenv" ] || [ "$CONTINUE_DEVELOPMENT" = "true" ]; then
+    echo "🐳 Docker environment detected - skipping VSIX packaging (not needed for F5 debugging)"
+    echo "✅ VSCode extension is ready for debugging with F5!"
+else
+    npm run package
+fi
 popd
 
 echo "Installing binary dependencies..."
