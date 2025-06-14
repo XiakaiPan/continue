@@ -64,6 +64,66 @@ file
 
 Learn about how to install and use Continue in the docs [here](https://continue.dev/docs/getting-started/install)
 
+## 🔨 Building VSIX Release
+
+For building a distributable VSIX package of the Continue extension:
+
+```bash
+# One-command build (all-in-container approach)
+./release.sh
+
+# Result: continue-{VERSION}.vsix in project root
+# Install: code --install-extension continue-{VERSION}.vsix
+```
+
+This consolidated approach:
+- ✅ Builds everything in consistent Docker environment
+- ✅ No host dependencies required (Node.js, npm, etc.)
+- ✅ Works around Docker file system issues
+- ✅ Produces ready-to-install VSIX file
+
+## 🐳 Docker Development Workflows
+
+Continue supports flexible Docker-based development for consistent environments:
+
+### **Workflow 1: Container-Attached IDE** (Experienced Developers)
+```bash
+# 1. Start container
+docker-compose up -d continue-vscode-dev
+
+# 2. Attach VS Code to container
+# VS Code → Remote-Containers → Attach to Running Container
+
+# 3. Develop entirely inside container
+# Complete isolation, consistent environment
+```
+
+### **Workflow 2: Host Edit + Container Build** (New Developers)
+```bash
+# 1. Start container & build project
+docker-compose up -d continue-vscode-dev
+docker exec continue-vscode-dev bash -c "cd /app && ./scripts/install-dependencies.sh"
+
+# 2. Develop with familiar tools
+# Edit on host, debug at http://localhost:8080
+# Best of both worlds: familiar tools + consistent builds
+```
+
+### **Quick Reference**
+```bash
+./docker-dev.sh          # Show development guide
+./dev-start.sh           # Setup development environment  
+./release.sh             # Build VSIX package
+./cleanup.sh             # Stop containers & cleanup
+```
+
+**Access Points:**
+- VS Code (browser): http://localhost:8080
+- GUI development: http://localhost:5173  
+- Core server: http://localhost:3000
+
+For detailed setup, see [DOCKER_DEV_GUIDE.md](./DOCKER_DEV_GUIDE.md).
+
 ## Contributing
 
 Read the [contributing guide](https://github.com/continuedev/continue/blob/main/CONTRIBUTING.md), and
