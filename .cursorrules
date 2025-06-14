@@ -1,0 +1,81 @@
+# Continue Docker Development Rules
+
+## 🎯 Project Focus
+- **Primary Goal**: VS Code extension development with Docker isolation
+- **Current State**: Basic extension debugging flow only
+- **Future Integration**: Frontend React dependencies + Python ML agent runtime
+
+## 🔧 Development Methodology
+- **TDD Approach**: Test-Driven Development
+  1. Write failing tests first
+  2. Build Docker environment to pass tests
+  3. Iterate on Dockerfiles until tests pass
+  4. Refactor and improve
+
+## 🐳 Docker Environment Rules
+
+### Full Project Environment
+- **Purpose**: VS Code extension debugging ONLY
+- **Components**: Extension + Core + GUI + Binary
+- **Test Strategy**: Build → Enter container → Fix errors → Repeat
+- **Success Criteria**: Extension debugs successfully with F5
+
+### Frontend Environment
+- **Purpose**: React component development preparation
+- **Keep Simple**: Basic React/Vite setup for future integration
+- **Dependencies**: Easily addable to main project later
+- **No Over-Engineering**: Minimal setup, focus on integration readiness
+
+### ML Agent Environment
+- **Purpose**: Python runtime preparation
+- **Isolation**: Completely separate from main project
+- **Integration**: HTTP API for future communication
+- **Runtime Target**: Will be packaged as binary for extension
+
+## 📋 Cooperation Rules
+
+### Code Changes
+- **Modify First**: Don't ask, just implement and iterate
+- **User Feedback**: User will reject if change is not desired
+- **Error-Driven**: Use build errors to guide improvements
+- **Minimal Changes**: Focus on current needs, not future possibilities
+
+### Documentation
+- **Current State Only**: No old version references
+- **Design Intent**: Explain why, not just how
+- **Clean Structure**: Remove outdated information
+- **Practical Focus**: What works now, not what might work
+
+### Testing Approach
+1. **Build Docker Images**: Start with basic build
+2. **Enter Containers**: Test actual functionality
+3. **Fix Errors**: Adapt Dockerfiles based on real errors
+4. **Validate**: Ensure extension debugging works
+5. **Iterate**: Repeat until stable
+
+## 🚫 Avoid
+- Over-documenting future features
+- Complex frontend setups (keep simple)
+- Detailed ML agent implementation (basic structure only)
+- Multiple Docker variations (focus on working solution)
+
+## ✅ Success Metrics
+- [ ] Full project Docker builds successfully
+- [ ] VS Code extension debugs with F5 in container
+- [ ] Frontend environment ready for React integration
+- [ ] ML agent environment ready for Python runtime
+- [ ] All environments start/stop cleanly
+- [ ] Dependencies easily integratable
+
+## 🔄 Iteration Process
+1. Test current Docker setup
+2. Identify and fix build errors
+3. Validate extension debugging works
+4. Simplify and clean up
+5. Prepare for future integration points
+
+## 📝 Documentation Standards
+- **Brevity**: Keep explanations concise
+- **Practicality**: Focus on what developers need to know
+- **Current State**: Document what exists, not what's planned
+- **Clean Examples**: Working commands and workflows only 
