@@ -1,0 +1,60 @@
+# Development Dockerfile - optimized for fast builds and development workflow
+FROM node:20.19.0-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies needed for development
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++ \
+    bash \
+    curl \
+    vim \
+    nano
+
+# Copy package files first for better caching
+COPY package*.json ./
+COPY core/package*.json ./core/
+COPY gui/package*.json ./gui/
+COPY binary/package*.json ./binary/
+COPY extensions/vscode/package*.json ./extensions/vscode/
+
+# Install ALL dependencies (including dev dependencies)
+RUN npm ci
+
+# Install dependencies for all components with dev dependencies
+RUN cd core && npm ci
+RUN cd gui && npm ci  
+RUN cd binary && npm ci
+RUN cd extensions/vscode && npm ci
+
+# Copy source code
+COPY . .
+
+# Don't build in dev - let the developer do it interactively
+# This allows for faster container startup
+
+# Install global development tools
+RUN npm install -g nodemon concurrently typescript
+
+# Expose development ports
+EXPOSE 3000 8080 5173 9229
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S continue && \
+    adduser -S continue -u 1001 -G continue
+
+# Change ownership of app directory
+RUN chown -R continue:continue /app
+
+# Switch to non-root user
+USER continue
+
+# Set up shell for better development experience
+ENV SHELL=/bin/bash
+
+# Default to bash for interactive development
+CMD ["bash"] 

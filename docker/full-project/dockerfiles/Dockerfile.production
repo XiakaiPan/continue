@@ -1,0 +1,58 @@
+# Use Node.js 20.19.0 as base image
+FROM node:20.19.0-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++ \
+    bash \
+    curl
+
+# Copy package files first for better caching
+COPY package*.json ./
+COPY core/package*.json ./core/
+COPY gui/package*.json ./gui/
+COPY binary/package*.json ./binary/
+COPY extensions/vscode/package*.json ./extensions/vscode/
+
+# Install root dependencies
+RUN npm ci --only=production
+
+# Install dependencies for all components
+RUN cd core && npm ci --only=production
+RUN cd gui && npm ci --only=production  
+RUN cd binary && npm ci --only=production
+RUN cd extensions/vscode && npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Build TypeScript files
+RUN npx tsc --project core/tsconfig.json
+RUN npx tsc --project gui/tsconfig.json
+RUN npx tsc --project binary/tsconfig.json
+RUN npx tsc --project extensions/vscode/tsconfig.json
+
+# Build GUI
+RUN cd gui && npm run build
+
+# Expose common development ports
+EXPOSE 3000 8080 5173
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S continue && \
+    adduser -S continue -u 1001 -G continue
+
+# Change ownership of app directory
+RUN chown -R continue:continue /app
+
+# Switch to non-root user
+USER continue
+
+# Default command - can be overridden
+CMD ["bash"] 

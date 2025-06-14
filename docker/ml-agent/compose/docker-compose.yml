@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # ML Agent Development Environment
+  ml-agent-dev:
+    build:
+      context: ../../..
+      dockerfile: docker/ml-agent/dockerfiles/Dockerfile.ml-agent
+    container_name: continue-ml-agent-dev
+    ports:
+      - "8000:8000"  # FastAPI server
+      - "8888:8888"  # JupyterLab
+    volumes:
+      # Mount ML agent source for development (when it exists)
+      # - ../../../ml-agent:/app/src
+      - ml-agent-data:/app/data
+      - ml-agent-notebooks:/app/notebooks
+      - ml-agent-models:/app/models
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=development
+    stdin_open: true
+    tty: true
+    networks:
+      - ml-agent-network
+
+  # FastAPI Server Only
+  ml-agent-api:
+    build:
+      context: ../../..
+      dockerfile: docker/ml-agent/dockerfiles/Dockerfile.ml-agent
+    container_name: continue-ml-agent-api
+    ports:
+      - "8001:8000"  # Alternative port for API-only service
+    volumes:
+      # Mount ML agent source for development
+      # - ../../../ml-agent:/app/src
+      - ml-agent-data:/app/data
+      - ml-agent-models:/app/models
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=development
+    command: python src/api/main.py
+    networks:
+      - ml-agent-network
+    profiles:
+      - api-only
+
+  # JupyterLab Only
+  ml-agent-jupyter:
+    build:
+      context: ../../..
+      dockerfile: docker/ml-agent/dockerfiles/Dockerfile.ml-agent
+    container_name: continue-ml-agent-jupyter
+    ports:
+      - "8889:8888"  # Alternative port for Jupyter-only service
+    volumes:
+      # Mount ML agent source for development
+      # - ../../../ml-agent:/app/src
+      - ml-agent-data:/app/data
+      - ml-agent-notebooks:/app/notebooks
+      - ml-agent-models:/app/models
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=development
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+    networks:
+      - ml-agent-network
+    profiles:
+      - jupyter-only
+
+  # Redis for caching and message queue (optional)
+  ml-agent-redis:
+    image: redis:7-alpine
+    container_name: continue-ml-agent-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ml-agent-redis-data:/data
+    networks:
+      - ml-agent-network
+    profiles:
+      - with-redis
+
+networks:
+  ml-agent-network:
+    driver: bridge
+
+volumes:
+  ml-agent-data:
+  ml-agent-notebooks:
+  ml-agent-models:
+  ml-agent-redis-data: 

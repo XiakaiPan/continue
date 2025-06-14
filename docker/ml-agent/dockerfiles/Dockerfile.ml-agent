@@ -1,0 +1,152 @@
+# ML Agent Development - Python/LangChain Environment
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for ML development
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    wget \
+    build-essential \
+    pkg-config \
+    libffi-dev \
+    libssl-dev \
+    vim \
+    nano \
+    htop \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js (for potential JS/TS integration)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs
+
+# Upgrade pip and install core Python packages
+RUN pip install --upgrade pip setuptools wheel
+
+# Install ML and AI development packages
+RUN pip install \
+    # Core ML libraries
+    numpy==1.24.3 \
+    pandas==2.0.3 \
+    scikit-learn==1.3.0 \
+    # LangChain ecosystem
+    langchain==0.1.0 \
+    langchain-community==0.0.10 \
+    langchain-core==0.1.10 \
+    # Vector databases
+    chromadb==0.4.18 \
+    faiss-cpu==1.7.4 \
+    # HTTP and API
+    fastapi==0.104.1 \
+    uvicorn==0.24.0 \
+    requests==2.31.0 \
+    httpx==0.25.2 \
+    # Development tools
+    jupyter==1.0.0 \
+    jupyterlab==4.0.8 \
+    ipython==8.17.2 \
+    # Testing and utilities
+    pytest==7.4.3 \
+    python-dotenv==1.0.0 \
+    pydantic==2.5.0 \
+    # Async support
+    asyncio \
+    aiohttp==3.9.1
+
+# Create requirements.txt for future reference
+RUN pip freeze > requirements.txt
+
+# Create ML agent project structure
+RUN mkdir -p /app/src/agents \
+             /app/src/api \
+             /app/src/models \
+             /app/src/utils \
+             /app/tests \
+             /app/notebooks \
+             /app/data \
+             /app/configs
+
+# Copy ML agent source code (when it exists)
+# COPY ml-agent/ ./src/
+
+# Create a basic FastAPI server template
+RUN echo 'from fastapi import FastAPI\n\
+from fastapi.middleware.cors import CORSMiddleware\n\
+import uvicorn\n\
+\n\
+app = FastAPI(title="Continue ML Agent API", version="1.0.0")\n\
+\n\
+# Configure CORS for communication with TypeScript extension\n\
+app.add_middleware(\n\
+    CORSMiddleware,\n\
+    allow_origins=["*"],  # In production, specify actual origins\n\
+    allow_credentials=True,\n\
+    allow_methods=["*"],\n\
+    allow_headers=["*"],\n\
+)\n\
+\n\
+@app.get("/")\n\
+async def root():\n\
+    return {"message": "Continue ML Agent API is running"}\n\
+\n\
+@app.get("/health")\n\
+async def health_check():\n\
+    return {"status": "healthy", "service": "ml-agent"}\n\
+\n\
+@app.post("/agent/query")\n\
+async def agent_query(query: dict):\n\
+    # TODO: Implement LangChain agent logic\n\
+    return {"response": f"Agent received: {query.get(\"message\", \"\")}"}\n\
+\n\
+if __name__ == "__main__":\n\
+    uvicorn.run(app, host="0.0.0.0", port=8000)\n\
+' > /app/src/api/main.py
+
+# Create Jupyter configuration
+RUN jupyter lab --generate-config
+RUN echo "c.ServerApp.ip = '0.0.0.0'" >> ~/.jupyter/jupyter_lab_config.py
+RUN echo "c.ServerApp.allow_root = True" >> ~/.jupyter/jupyter_lab_config.py
+RUN echo "c.ServerApp.token = ''" >> ~/.jupyter/jupyter_lab_config.py
+RUN echo "c.ServerApp.password = ''" >> ~/.jupyter/jupyter_lab_config.py
+
+# Expose ports for development
+EXPOSE 8000 8888
+
+# Create non-root user for security (optional for development)
+# RUN useradd -m -u 1001 mldev
+# USER mldev
+
+# Create startup script
+RUN echo '#!/bin/bash\n\
+echo "🤖 Continue ML Agent Development Environment"\n\
+echo "=========================================="\n\
+echo ""\n\
+echo "Available services:"\n\
+echo "  🚀 FastAPI Server: http://localhost:8000"\n\
+echo "  📊 JupyterLab: http://localhost:8888"\n\
+echo ""\n\
+echo "API Endpoints:"\n\
+echo "  GET  /health - Health check"\n\
+echo "  POST /agent/query - Agent query endpoint"\n\
+echo ""\n\
+echo "Commands:"\n\
+echo "  python src/api/main.py  # Start FastAPI server"\n\
+echo "  jupyter lab            # Start JupyterLab"\n\
+echo "  pytest tests/          # Run tests"\n\
+echo ""\n\
+echo "Starting services..."\n\
+echo ""\n\
+# Start JupyterLab in background\n\
+jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root &\n\
+# Start FastAPI server\n\
+cd /app && python src/api/main.py\n\
+' > /app/start-ml-agent.sh && chmod +x /app/start-ml-agent.sh
+
+# Set up environment
+ENV PYTHONPATH=/app/src
+ENV PYTHONUNBUFFERED=1
+
+# Default command
+CMD ["/app/start-ml-agent.sh"] 

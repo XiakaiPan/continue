@@ -1,0 +1,94 @@
+services:
+  # VS Code Extension Development Environment
+  continue-vscode-dev:
+    build:
+      context: ../../..
+      dockerfile: docker/full-project/dockerfiles/Dockerfile.vscode-dev
+    container_name: continue-vscode-dev
+    ports:
+      - "8080:8080"   # Code Server
+      - "3000:3000"   # Core server
+      - "5173:5173"   # GUI dev server (Vite)
+      - "9229:9229"   # Node.js debugger
+    volumes:
+      # Mount source code for live development
+      - ../../..:/app
+      - /app/node_modules
+      - /app/core/node_modules
+      - /app/gui/node_modules
+      - /app/binary/node_modules
+      - /app/extensions/vscode/node_modules
+      # Mount VS Code extensions directory for persistence
+      - vscode-extensions:/root/.local/share/code-server/extensions
+    environment:
+      - NODE_ENV=development
+      - CONTINUE_DEVELOPMENT=true
+      - CONTINUE_GLOBAL_DIR=/app/extensions/.continue-debug
+      - CHOKIDAR_USEPOLLING=true
+      - DISPLAY=:99
+    stdin_open: true
+    tty: true
+    networks:
+      - continue-network
+    profiles:
+      - vscode
+
+  continue-dev:
+    build:
+      context: ../../..
+      dockerfile: docker/full-project/dockerfiles/Dockerfile.production
+    container_name: continue-dev
+    ports:
+      - "3001:3000"   # GUI dev server
+      - "8081:8080"   # Core server
+      - "5174:5173"   # Vite dev server
+    volumes:
+      # Mount source code for live development
+      - ../../..:/app
+      - /app/node_modules
+      - /app/core/node_modules
+      - /app/gui/node_modules
+      - /app/binary/node_modules
+      - /app/extensions/vscode/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true  # For file watching in containers
+    command: bash -c "npm run tsc:watch"
+    stdin_open: true
+    tty: true
+    networks:
+      - continue-network
+
+  # Separate service for GUI development
+  continue-gui:
+    build:
+      context: ../../..
+      dockerfile: docker/full-project/dockerfiles/Dockerfile.production
+    container_name: continue-gui
+    ports:
+      - "5174:5173"
+    volumes:
+      - ../../..:/app
+      - /app/node_modules
+      - /app/gui/node_modules
+    working_dir: /app/gui
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run dev
+    networks:
+      - continue-network
+    profiles:
+      - gui
+
+networks:
+  continue-network:
+    driver: bridge
+
+volumes:
+  node_modules:
+  core_node_modules:
+  gui_node_modules:
+  binary_node_modules:
+  vscode_node_modules:
+  vscode-extensions: 

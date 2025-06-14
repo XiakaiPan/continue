@@ -1,0 +1,71 @@
+# Frontend Only Development - Lightweight React/Vite/Storybook Environment
+FROM node:20.19.0-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies for frontend development
+RUN apk add --no-cache \
+    git \
+    bash \
+    curl \
+    vim \
+    nano
+
+# Install global frontend development tools
+RUN npm install -g \
+    @storybook/cli \
+    vite \
+    typescript \
+    @types/node
+
+# Create package.json for frontend-only development
+COPY gui/package*.json ./
+RUN npm ci
+
+# Copy GUI source code
+COPY gui/ ./
+
+# Install Storybook if not already configured
+RUN if [ ! -d ".storybook" ]; then \
+    npx storybook@latest init --yes --package-manager npm; \
+fi
+
+# Create Storybook configuration for React Flow components
+RUN mkdir -p .storybook/stories
+
+# Expose ports for development
+EXPOSE 5173 6006
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S frontend && \
+    adduser -S frontend -u 1001 -G frontend
+
+# Change ownership of app directory
+RUN chown -R frontend:frontend /app
+
+# Switch to non-root user
+USER frontend
+
+# Create startup script for frontend development
+RUN echo '#!/bin/bash' > /app/start-frontend.sh && \
+    echo 'echo "🎨 Continue Frontend Development Environment"' >> /app/start-frontend.sh && \
+    echo 'echo "================================="' >> /app/start-frontend.sh && \
+    echo 'echo ""' >> /app/start-frontend.sh && \
+    echo 'echo "Available services:"' >> /app/start-frontend.sh && \
+    echo 'echo "  📦 Vite Dev Server: http://localhost:5173"' >> /app/start-frontend.sh && \
+    echo 'echo "  📚 Storybook: http://localhost:6006"' >> /app/start-frontend.sh && \
+    echo 'echo ""' >> /app/start-frontend.sh && \
+    echo 'echo "Commands:"' >> /app/start-frontend.sh && \
+    echo 'echo "  npm run dev      # Start Vite development server"' >> /app/start-frontend.sh && \
+    echo 'echo "  npm run storybook # Start Storybook"' >> /app/start-frontend.sh && \
+    echo 'echo "  npm run build    # Build for production"' >> /app/start-frontend.sh && \
+    echo 'echo ""' >> /app/start-frontend.sh && \
+    chmod +x /app/start-frontend.sh
+
+# Set up environment for frontend development
+ENV NODE_ENV=development
+ENV CHOKIDAR_USEPOLLING=true
+
+# Default command
+CMD ["/app/start-frontend.sh"] 

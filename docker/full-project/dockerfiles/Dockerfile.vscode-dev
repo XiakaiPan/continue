@@ -1,0 +1,52 @@
+# VS Code Extension Development Dockerfile
+FROM node:20.19.0
+
+# Install system dependencies for VS Code development
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    supervisor \
+    xvfb \
+    x11vnc \
+    fluxbox \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install code-server
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+
+# Install Vite globally (as mentioned in CONTRIBUTING.md)
+RUN npm i -g vite
+
+# Set working directory
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Create supervisor configuration
+COPY docker/full-project/dockerfiles/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create setup script that will run on container start
+COPY docker/full-project/dockerfiles/setup.sh /usr/local/bin/setup.sh
+RUN chmod +x /usr/local/bin/setup.sh
+
+# Create manual testing sandbox directory (used by launch configuration)
+RUN mkdir -p /app/manual-testing-sandbox && \
+    echo "console.log('Hello from manual testing sandbox');" > /app/manual-testing-sandbox/test.js
+
+# Expose ports
+EXPOSE 8080
+EXPOSE 3000
+EXPOSE 5173
+EXPOSE 9229
+EXPOSE 5900
+
+# Set environment variables
+ENV NODE_ENV=development
+ENV CONTINUE_DEVELOPMENT=true
+ENV CONTINUE_GLOBAL_DIR=/app/extensions/.continue-debug
+ENV CHOKIDAR_USEPOLLING=true
+ENV DISPLAY=:99
+
+# Start setup script (installs dependencies and starts services)
+CMD ["/usr/local/bin/setup.sh"] 

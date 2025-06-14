@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Vite Development Server
+  frontend-vite:
+    build:
+      context: ../../..
+      dockerfile: docker/frontend-only/dockerfiles/Dockerfile.frontend
+    container_name: continue-frontend-vite
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount GUI source for live development
+      - ../../../gui:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_HOST=0.0.0.0
+    command: npm run dev
+    stdin_open: true
+    tty: true
+    networks:
+      - frontend-network
+
+  # Storybook Development Server
+  frontend-storybook:
+    build:
+      context: ../../..
+      dockerfile: docker/frontend-only/dockerfiles/Dockerfile.frontend
+    container_name: continue-frontend-storybook
+    ports:
+      - "6006:6006"
+    volumes:
+      # Mount GUI source for live development
+      - ../../../gui:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    command: npm run storybook
+    stdin_open: true
+    tty: true
+    networks:
+      - frontend-network
+    profiles:
+      - storybook
+
+  # Combined Frontend Development (Vite + Storybook)
+  frontend-dev:
+    build:
+      context: ../../..
+      dockerfile: docker/frontend-only/dockerfiles/Dockerfile.frontend
+    container_name: continue-frontend-dev
+    ports:
+      - "5173:5173"  # Vite
+      - "6006:6006"  # Storybook
+    volumes:
+      # Mount GUI source for live development
+      - ../../../gui:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_HOST=0.0.0.0
+    command: >
+      bash -c "
+        echo 'Starting Combined Frontend Development Environment...' &&
+        npm run dev &
+        npm run storybook &
+        wait
+      "
+    stdin_open: true
+    tty: true
+    networks:
+      - frontend-network
+    profiles:
+      - combined
+
+networks:
+  frontend-network:
+    driver: bridge
+
+volumes:
+  frontend-node-modules: 
